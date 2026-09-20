@@ -225,6 +225,3 @@ whatsapp-crm/
     ├── decorators.py
     ├── helpers.py
     └── validators.py
-
-
-INSTAGRAM_ACCESS_TOKEN=your-instagram-token
