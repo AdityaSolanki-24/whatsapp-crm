@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Customer — WhatsApp CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ action }} Customer</h1>
+    <p class="page-subtitle">{% if action == 'Edit' %}Update customer information{% else %}Add a new customer{% endif %}</p>
+  </div>
+  <a href="{{ url_for('customers.index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header fw-semibold">Customer Details</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.customer_id.label.text }}</label>
+              {{ form.customer_id() }}
+              {% if form.customer_id.errors %}
+                <div class="invalid-feedback d-block">{{ form.customer_id.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+              {{ form.name() }}
+              {% if form.name.errors %}
+                <div class="invalid-feedback d-block">{{ form.name.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.phone.label.text }}</label>
+              {{ form.phone() }}
+              <div class="form-text">Include country code, e.g. 919876543210</div>
+              {% if form.phone.errors %}
+                <div class="invalid-feedback d-block">{{ form.phone.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.email.label.text }}</label>
+              {{ form.email() }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{{ form.email.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.orders.label.text }}</label>
+              {{ form.orders() }}
+              {% if form.orders.errors %}
+                <div class="invalid-feedback d-block">{{ form.orders.errors[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.status.label.text }}</label>
+              {{ form.status() }}
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            {{ form.submit() }}
+            <a href="{{ url_for('customers.index') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

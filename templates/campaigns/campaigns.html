@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Campaigns — WhatsApp CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Campaigns</h1>
+    <p class="page-subtitle">{{ campaigns.total }} total campaigns</p>
+  </div>
+  <a href="{{ url_for('campaigns.create') }}" class="btn btn-success">
+    <i class="bi bi-plus-lg me-1"></i>New Campaign
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if campaigns.items %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Sent</th>
+            <th>Failed</th>
+            <th>Success Rate</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in campaigns.items %}
+          <tr>
+            <td class="fw-medium">{{ c.title }}</td>
+            <td>
+              <span class="badge bg-{% if c.status == 'completed' %}success{% elif c.status == 'running' %}warning text-dark{% elif c.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                {% if c.status == 'running' %}<span class="spinner-border spinner-border-sm me-1"></span>{% endif %}
+                {{ c.status|capitalize }}
+              </span>
+            </td>
+            <td>{{ c.total_customers }}</td>
+            <td class="text-success fw-semibold">{{ c.sent_count }}</td>
+            <td class="text-danger">{{ c.failed_count }}</td>
+            <td>
+              {% if c.total_customers > 0 %}
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:6px; min-width:60px;">
+                  <div class="progress-bar bg-success" style="width:{{ c.success_rate }}%"></div>
+                </div>
+                <span class="small text-muted">{{ c.success_rate }}%</span>
+              </div>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-muted small">{{ c.created_at.strftime('%d %b %Y') }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="{{ url_for('campaigns.view', campaign_id=c.id) }}"
+                   class="btn btn-xs btn-outline-primary" title="View">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{{ url_for('campaigns.history', campaign_id=c.id) }}"
+                   class="btn btn-xs btn-outline-secondary" title="History">
+                  <i class="bi bi-clock-history"></i>
+                </a>
+                <form method="POST" action="{{ url_for('campaigns.delete', campaign_id=c.id) }}"
+                      onsubmit="return confirm('Delete campaign \'{{ c.title }}\'?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if campaigns.pages > 1 %}
+    <div class="d-flex justify-content-center py-3 border-top">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if campaigns.has_prev %}
+          <li class="page-item"><a class="page-link" href="{{ url_for('campaigns.index', page=campaigns.prev_num) }}">‹</a></li>
+          {% endif %}
+          {% for p in campaigns.iter_pages() %}
+            {% if p %}
+            <li class="page-item {% if p == campaigns.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('campaigns.index', page=p) }}">{{ p }}</a>
+            </li>
+            {% endif %}
+          {% endfor %}
+          {% if campaigns.has_next %}
+          <li class="page-item"><a class="page-link" href="{{ url_for('campaigns.index', page=campaigns.next_num) }}">›</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state py-5">
+      <i class="bi bi-megaphone fs-1 text-muted"></i>
+      <p class="mt-3 text-muted">No campaigns yet.</p>
+      <a href="{{ url_for('campaigns.create') }}" class="btn btn-success">Create First Campaign</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

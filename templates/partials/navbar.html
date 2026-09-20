@@ -1,0 +1,25 @@
+<nav class="topbar">
+  <div class="topbar-left">
+    <button class="sidebar-toggle" id="sidebarToggle">
+      <i class="bi bi-list fs-4"></i>
+    </button>
+    <nav aria-label="breadcrumb" class="ms-3 d-none d-md-block">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('dashboard.index') }}">Home</a>
+        </li>
+        {% block breadcrumb %}{% endblock %}
+      </ol>
+    </nav>
+  </div>
+
+  <div class="topbar-right">
+    <div class="admin-chip">
+      <i class="bi bi-shield-fill-check text-success"></i>
+      <span>{{ current_user.username }}</span>
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-secondary ms-2">
+      <i class="bi bi-box-arrow-right"></i>
+    </a>
+  </div>
+</nav>

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Upload Media — WhatsApp CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Upload Image</h1>
+    <p class="page-subtitle">Add an image to your media gallery</p>
+  </div>
+  <a href="{{ url_for('media.index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Gallery
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header fw-semibold">Upload Image</div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('media.upload') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+          <div class="upload-zone mb-4" id="uploadZone">
+            <input type="file" name="image_file" id="imageFile"
+                   accept=".png,.jpg,.jpeg,.gif,.webp" class="upload-input" required />
+            <div class="upload-zone-inner">
+              <i class="bi bi-image fs-1 text-success"></i>
+              <p class="fw-semibold mt-2 mb-1">Drop image here or click to browse</p>
+              <p class="text-muted small mb-0">PNG, JPG, JPEG, GIF, WEBP · Max 16MB</p>
+              <div id="fileName" class="mt-2 text-success fw-semibold small d-none"></div>
+            </div>
+          </div>
+
+          <div id="imagePreviewContainer" class="mb-3 d-none text-center">
+            <img id="imagePreviewEl" src="" alt="Preview"
+                 style="max-height:200px;max-width:100%;border-radius:8px;border:1px solid #dee2e6;" />
+          </div>
+
+          <button type="submit" class="btn btn-success w-100 btn-lg">
+            <i class="bi bi-cloud-upload me-2"></i>Upload Image
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const input = document.getElementById('imageFile');
+const fileNameEl = document.getElementById('fileName');
+const zone = document.getElementById('uploadZone');
+const previewContainer = document.getElementById('imagePreviewContainer');
+const previewEl = document.getElementById('imagePreviewEl');
+
+function showPreview(file) {
+  fileNameEl.textContent = '✓ ' + file.name;
+  fileNameEl.classList.remove('d-none');
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewEl.src = e.target.result;
+    previewContainer.classList.remove('d-none');
+  };
+  reader.readAsDataURL(file);
+}
+
+input.addEventListener('change', () => { if (input.files[0]) showPreview(input.files[0]); });
+
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) {
+    input.files = e.dataTransfer.files;
+    showPreview(e.dataTransfer.files[0]);
+  }
+});
+</script>
+{% endblock %}

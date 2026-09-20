@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Customers — WhatsApp CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Customers</h1>
+    <p class="page-subtitle">{{ pagination.total }} total customers</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('customers.import_csv') }}" class="btn btn-outline-primary">
+      <i class="bi bi-upload me-1"></i>Import CSV
+    </a>
+    <a href="{{ url_for('customers.add') }}" class="btn btn-success">
+      <i class="bi bi-person-plus me-1"></i>Add Customer
+    </a>
+  </div>
+</div>
+
+<!-- Search Bar -->
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="GET" action="{{ url_for('customers.index') }}" class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Search</label>
+        <input type="text" name="search" value="{{ search }}" class="form-control"
+               placeholder="Search customers..." />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold small">Search By</label>
+        <select name="search_by" class="form-select">
+          <option value="name" {% if search_by == 'name' %}selected{% endif %}>Name</option>
+          <option value="phone" {% if search_by == 'phone' %}selected{% endif %}>Phone</option>
+          <option value="customer_id" {% if search_by == 'customer_id' %}selected{% endif %}>Customer ID</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+          <i class="bi bi-search me-1"></i>Search
+        </button>
+        {% if search %}
+        <a href="{{ url_for('customers.index') }}" class="btn btn-outline-secondary">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card">
+  <div class="card-body p-0">
+    {% if customers %}
+
+    <form method="POST" action="{{ url_for('customers.delete_selected') }}" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      {% if search %}
+        <input type="hidden" name="search" value="{{ search }}" />
+      {% endif %}
+      <input type="hidden" name="search_by" value="{{ search_by }}" />
+      <input type="hidden" name="all_customers" id="all_customers" value="false">
+
+      <div class="d-flex justify-content-between align-items-center px-3 py-2 border rounded bg-light">
+        <div class="d-flex align-items-center gap-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="selectAllCustomers" />
+            <label class="form-check-label" for="selectAllCustomers">Select current page</label>
+          </div>
+          <label>
+    <input type="checkbox" id="select_all_db" name="select_all_db">
+    Select ALL Customers (All Pages)
+</label>
+        </div>
+
+        <button type="submit" class="btn btn-outline-danger" id="bulkDeleteBtn"
+                onclick="return confirm('Delete selected customers?')">
+          <i class="bi bi-trash me-1"></i>Delete selected
+        </button>
+      </div>
+
+      <div class="table-responsive mt-3">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 52px;">&nbsp;</th>
+              <th>Customer ID</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Orders</th>
+              <th>Status</th>
+              <th>Added</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in customers %}
+            <tr>
+              <td>
+                <div class="form-check">
+                  <input class="form-check-input customer-checkbox" type="checkbox"
+                         name="customer_ids" value="{{ c.id }}"
+                         id="customer_cb_{{ c.id }}" />
+                </div>
+              </td>
+              <td><code class="small">{{ c.customer_id }}</code></td>
+              <td class="fw-medium">{{ c.name }}</td>
+              <td>{{ c.phone }}</td>
+              <td class="text-muted small">{{ c.email or '—' }}</td>
+              <td>{{ c.orders }}</td>
+              <td>
+                <span class="badge rounded-pill bg-{% if c.status == 'active' %}success{% elif c.status == 'inactive' %}secondary{% else %}danger{% endif %}">
+                  {{ c.status|capitalize }}
+                </span>
+              </td>
+              <td class="text-muted small">{{ c.created_at.strftime('%d %b %Y') }}</td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{{ url_for('customers.view', customer_id=c.id) }}"
+                     class="btn btn-xs btn-outline-secondary" title="View">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="{{ url_for('customers.edit', customer_id=c.id) }}"
+                     class="btn btn-xs btn-outline-primary" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="POST" action="{{ url_for('customers.delete', customer_id=c.id) }}"
+                        onsubmit="return confirm('Delete {{ c.name }}?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+
+    <script>
+      (function () {
+        const selectAllPage = document.getElementById('selectAllCustomers');
+        const selectAllDb = document.getElementById('select_all_db');
+        const checkboxes = document.querySelectorAll('.customer-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const allCustomersHidden = document.getElementById('all_customers');
+
+        function setBulkState() {
+          const anyChecked =
+              Array.from(checkboxes).some(cb => cb.checked) ||
+              (selectAllDb && selectAllDb.checked);
+
+          if (bulkDeleteBtn) {
+              bulkDeleteBtn.disabled = !anyChecked;
+          }
+          
+          if (allCustomersHidden && selectAllDb) {
+              allCustomersHidden.value = selectAllDb.checked ? "true" : "false";
+          }
+        }
+
+        if (selectAllPage) {
+          selectAllPage.addEventListener('change', function () {
+            if (!selectAllPage.checked && selectAllDb) {
+                selectAllDb.checked = false;
+            }
+            checkboxes.forEach(cb => { cb.checked = selectAllPage.checked; });
+            setBulkState();
+          });
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', function () {
+          if (!this.checked && selectAllDb) {
+              selectAllDb.checked = false;
+          }
+          setBulkState();
+          if (selectAllPage) {
+            selectAllPage.checked = Array.from(checkboxes).every(x => x.checked);
+          }
+        }));
+
+        if (selectAllDb) {
+            selectAllDb.addEventListener('change', function () {
+                if (selectAllPage) {
+                    selectAllPage.checked = selectAllDb.checked;
+                }
+                checkboxes.forEach(cb => {
+                    cb.checked = selectAllDb.checked;
+                });
+                setBulkState();
+            });
+        }
+
+        setBulkState();
+      })();
+    </script>
+
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top">
+      <small class="text-muted">
+        Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }}–{{ [pagination.page * pagination.per_page, pagination.total]|min }}
+        of {{ pagination.total }}
+      </small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if pagination.has_prev %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('customers.index', page=pagination.prev_num, search=search, search_by=search_by) }}">‹</a>
+          </li>
+          {% endif %}
+          {% for p in pagination.iter_pages() %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('customers.index', page=p, search=search, search_by=search_by) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          {% if pagination.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('customers.index', page=pagination.next_num, search=search, search_by=search_by) }}">›</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state py-5">
+      <i class="bi bi-people fs-1 text-muted"></i>
+      <p class="mt-3 text-muted">
+        {% if search %}No customers match your search.{% else %}No customers yet.{% endif %}
+      </p>
+      {% if not search %}
+      <a href="{{ url_for('customers.import_csv') }}" class="btn btn-primary me-2">Import CSV</a>
+      <a href="{{ url_for('customers.add') }}" class="btn btn-outline-primary">Add Manually</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

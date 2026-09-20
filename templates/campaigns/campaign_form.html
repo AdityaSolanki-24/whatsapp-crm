@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Create Campaign — WhatsApp CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Create Campaign</h1>
+    <p class="page-subtitle">Compose and configure your WhatsApp campaign</p>
+  </div>
+  <a href="{{ url_for('campaigns.index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Campaign Form -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header fw-semibold">Campaign Details</div>
+      <div class="card-body">
+        <form method="POST" id="campaignForm" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.title.label.text }}</label>
+            {{ form.title() }}
+            {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>{% endif %}
+          </div>
+
+          <!-- Template Picker -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Load from Template <span class="text-muted fw-normal">(optional)</span></label>
+            <div class="input-group">
+              <select id="templatePicker" class="form-select">
+                <option value="">— Select a template —</option>
+                {% for t in templates|groupby('category') %}
+                <optgroup label="{{ t.grouper|capitalize }}">
+                  {% for tpl in t.list %}
+                  <option value="{{ tpl.id }}">{{ tpl.template_name }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn btn-outline-secondary" id="loadTemplate">
+                <i class="bi bi-arrow-down-circle me-1"></i>Load
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.message.label.text }}</label>
+            {{ form.message() }}
+            <div class="form-text">
+              Variables: <code>{name}</code> <code>{customer_id}</code> <code>{email}</code> <code>{orders}</code> <code>{status}</code>
+            </div>
+            {% if form.message.errors %}<div class="invalid-feedback d-block">{{ form.message.errors[0] }}</div>{% endif %}
+          </div>
+
+          <!-- Image Picker -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Attach Image <span class="text-muted fw-normal">(optional)</span></label>
+            {{ form.image_path(id="imagePathInput") }}
+            <div id="selectedImagePreview" class="mt-2 d-none">
+              <div class="d-flex align-items-center gap-2 p-2 bg-light rounded">
+                <img id="previewThumb" src="" alt="preview" style="width:48px;height:48px;object-fit:cover;border-radius:6px;" />
+                <span id="previewName" class="small text-muted flex-grow-1"></span>
+                <button type="button" class="btn btn-xs btn-outline-danger" id="clearImage">
+                  <i class="bi bi-x"></i>
+                </button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" data-bs-target="#mediaModal">
+              <i class="bi bi-images me-1"></i>Choose from Media Gallery
+            </button>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-save me-1"></i>Save Campaign
+            </button>
+            <a href="{{ url_for('campaigns.index') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Preview -->
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header fw-semibold">Message Preview</div>
+      <div class="card-body">
+        <div class="whatsapp-preview">
+          <div class="wa-header">
+            <div class="wa-avatar"><i class="bi bi-whatsapp"></i></div>
+            <div>
+              <div class="fw-semibold small">Your Business</div>
+              <div class="text-muted" style="font-size:11px">WhatsApp Business</div>
+            </div>
+          </div>
+          <div class="wa-bubble-area">
+            <div id="imagePreviewWA" class="d-none mb-1">
+              <img id="waImagePreview" src="" alt="" style="width:100%;border-radius:8px;" />
+            </div>
+            <div class="wa-bubble" id="previewBubble">
+              <em class="text-muted small">Your message will appear here…</em>
+            </div>
+            <div class="wa-time">Just now</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header fw-semibold">Variable Reference</div>
+      <div class="card-body p-2">
+        <table class="table table-sm small mb-0">
+          <tbody>
+            <tr><td><code>{name}</code></td><td>Customer's full name</td></tr>
+            <tr><td><code>{customer_id}</code></td><td>Customer ID</td></tr>
+            <tr><td><code>{email}</code></td><td>Email address</td></tr>
+            <tr><td><code>{orders}</code></td><td>Total order count</td></tr>
+            <tr><td><code>{status}</code></td><td>Customer status</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Media Gallery Modal -->
+<div class="modal fade" id="mediaModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-semibold">Media Gallery</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="mediaGrid" class="row g-3">
+          <div class="text-center text-muted py-4">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live preview
+const msgArea = document.getElementById('{{ form.message.id }}');
+const previewBubble = document.getElementById('previewBubble');
+
+function updatePreview() {
+  let txt = msgArea.value || '';
+  txt = txt
+    .replace(/{name}/g, '<b>Rahul Sharma</b>')
+    .replace(/{customer_id}/g, '<b>CUST001</b>')
+    .replace(/{email}/g, '<b>rahul@email.com</b>')
+    .replace(/{orders}/g, '<b>5</b>')
+    .replace(/{status}/g, '<b>active</b>')
+    .replace(/\n/g, '<br>');
+  previewBubble.innerHTML = txt || '<em class="text-muted small">Your message will appear here…</em>';
+}
+
+msgArea.addEventListener('input', updatePreview);
+
+// Load template
+document.getElementById('loadTemplate').addEventListener('click', () => {
+  const id = document.getElementById('templatePicker').value;
+  if (!id) return;
+  fetch(`/templates/${id}/content`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.content) {
+        msgArea.value = d.content;
+        updatePreview();
+      }
+    });
+});
+
+// Media Gallery
+const mediaModal = document.getElementById('mediaModal');
+mediaModal.addEventListener('show.bs.modal', () => {
+  fetch('/media/api/list')
+    .then(r => r.json())
+    .then(files => {
+      const grid = document.getElementById('mediaGrid');
+      if (!files.length) {
+        grid.innerHTML = '<div class="col-12 text-center text-muted py-4"><i class="bi bi-images fs-1"></i><p class="mt-2">No images uploaded yet. <a href="/media/upload" target="_blank">Upload one</a></p></div>';
+        return;
+      }
+      grid.innerHTML = files.map(f => `
+        <div class="col-sm-4 col-md-3">
+          <div class="media-card" data-path="${f.file_path}" data-name="${f.original_filename || f.filename}">
+            <img src="/${f.file_path}" alt="${f.original_filename}" />
+            <div class="media-card-name">${f.original_filename || f.filename}</div>
+          </div>
+        </div>
+      `).join('');
+
+      grid.querySelectorAll('.media-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const path = card.dataset.path;
+          const name = card.dataset.name;
+          document.getElementById('imagePathInput').value = path;
+          document.getElementById('previewThumb').src = '/' + path;
+          document.getElementById('previewName').textContent = name;
+          document.getElementById('selectedImagePreview').classList.remove('d-none');
+          document.getElementById('waImagePreview').src = '/' + path;
+          document.getElementById('imagePreviewWA').classList.remove('d-none');
+          bootstrap.Modal.getInstance(mediaModal).hide();
+        });
+      });
+    });
+});
+
+document.getElementById('clearImage').addEventListener('click', () => {
+  document.getElementById('imagePathInput').value = '';
+  document.getElementById('selectedImagePreview').classList.add('d-none');
+  document.getElementById('imagePreviewWA').src = '';
+  document.getElementById('imagePreviewWA').classList.add('d-none');
+});
+</script>
+{% endblock %}

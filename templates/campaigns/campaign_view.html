@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.title }} — WhatsApp CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ campaign.title }}</h1>
+    <p class="page-subtitle">
+      <span class="badge bg-{% if campaign.status == 'completed' %}success{% elif campaign.status == 'running' %}warning text-dark{% elif campaign.status == 'failed' %}danger{% else %}secondary{% endif %} me-2">
+        {{ campaign.status|capitalize }}
+      </span>
+      Created {{ campaign.created_at.strftime('%d %b %Y %H:%M') }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('campaigns.history', campaign_id=campaign.id) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-clock-history me-1"></i>History
+    </a>
+    <a href="{{ url_for('campaigns.index') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Stats -->
+  <div class="col-12">
+    <div class="row g-3">
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-card--blue">
+          <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+          <div class="stat-body">
+            <div class="stat-value">{{ campaign.total_customers }}</div>
+            <div class="stat-label">Total</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-card--green">
+          <div class="stat-icon"><i class="bi bi-check2-all"></i></div>
+          <div class="stat-body">
+            <div class="stat-value">{{ campaign.sent_count }}</div>
+            <div class="stat-label">Sent</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-card--red">
+          <div class="stat-icon"><i class="bi bi-x-circle-fill"></i></div>
+          <div class="stat-body">
+            <div class="stat-value">{{ campaign.failed_count }}</div>
+            <div class="stat-label">Failed</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-card--purple">
+          <div class="stat-icon"><i class="bi bi-percent"></i></div>
+          <div class="stat-body">
+            <div class="stat-value">{{ campaign.success_rate }}%</div>
+            <div class="stat-label">Success Rate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message & Image Preview -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">Message Preview</div>
+      <div class="card-body">
+        {% if campaign.image_path %}
+        <img src="/{{ campaign.image_path }}" alt="Campaign Image" class="img-fluid rounded mb-3"
+             style="max-height:200px;object-fit:cover;width:100%;" />
+        {% endif %}
+        <div class="bg-light rounded p-3" style="white-space:pre-wrap;font-size:0.9rem;">{{ campaign.message }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Panel -->
+  <div class="col-lg-7">
+    {% if campaign.status not in ('running',) %}
+    <div class="card">
+      <div class="card-header fw-semibold">Send Campaign</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('campaigns.send', campaign_id=campaign.id) }}"
+              id="sendForm" onsubmit="return confirmSend()">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Send To</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="target" id="targetAll"
+                       value="all" checked onchange="toggleCustomerList(false)" />
+                <label class="form-check-label" for="targetAll">All Active Customers</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="target" id="targetSelected"
+                       value="selected" onchange="toggleCustomerList(true)" />
+                <label class="form-check-label" for="targetSelected">Selected Customers</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="customerSelector" class="mb-3 d-none">
+            <label class="form-label fw-semibold">Select Customers</label>
+            <div class="mb-2">
+              <input type="text" id="customerSearch" class="form-control form-control-sm"
+                     placeholder="Search by name or phone…" />
+            </div>
+            <div class="customer-checklist" style="max-height:250px;overflow-y:auto;border:1px solid #dee2e6;border-radius:8px;padding:8px;">
+              {% for c in customers %}
+              <div class="form-check customer-item" data-search="{{ c.name|lower }} {{ c.phone }}">
+                <input class="form-check-input" type="checkbox" name="customer_ids"
+                       value="{{ c.id }}" id="cust_{{ c.id }}" />
+                <label class="form-check-label" for="cust_{{ c.id }}">
+                  <span class="fw-medium">{{ c.name }}</span>
+                  <span class="text-muted small ms-2">{{ c.phone }}</span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="mt-1 d-flex gap-2">
+              <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAll(true)">Select All</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary" onclick="selectAll(false)">Deselect All</button>
+              <span class="text-muted small ms-auto" id="selectedCount">0 selected</span>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success btn-lg w-100" id="sendBtn">
+            <i class="bi bi-send-fill me-2"></i>
+            Send Campaign Now
+          </button>
+          <p class="text-muted small mt-2 mb-0 text-center">
+            <i class="bi bi-info-circle me-1"></i>
+            Sending may take several minutes for large lists. Do not close the browser.
+          </p>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning d-flex align-items-center">
+      <span class="spinner-border spinner-border-sm me-2"></span>
+      Campaign is currently running… {{ campaign.sent_count }}/{{ campaign.total_customers }} sent.
+    </div>
+    {% endif %}
+
+    <!-- Recent Logs -->
+    {% if logs %}
+    <div class="card mt-4">
+      <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+        <span>Recent Delivery Logs</span>
+        <a href="{{ url_for('campaigns.history', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr><th>Phone</th><th>Status</th><th>Sent At</th></tr>
+            </thead>
+            <tbody>
+              {% for log in logs[:10] %}
+              <tr>
+                <td>{{ log.phone }}</td>
+                <td>
+                  <span class="badge bg-{% if log.status == 'sent' %}success{% elif log.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                    {{ log.status }}
+                  </span>
+                </td>
+                <td class="text-muted small">{{ log.sent_at.strftime('%H:%M:%S') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleCustomerList(show) {
+  document.getElementById('customerSelector').classList.toggle('d-none', !show);
+}
+
+function selectAll(val) {
+  document.querySelectorAll('.customer-checklist input[type=checkbox]').forEach(cb => cb.checked = val);
+  updateCount();
+}
+
+function updateCount() {
+  const count = document.querySelectorAll('.customer-checklist input[type=checkbox]:checked').length;
+  document.getElementById('selectedCount').textContent = count + ' selected';
+}
+
+document.querySelectorAll('.customer-checklist input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', updateCount);
+});
+
+document.getElementById('customerSearch')?.addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.customer-item').forEach(el => {
+    el.style.display = el.dataset.search.includes(q) ? '' : 'none';
+  });
+});
+
+function confirmSend() {
+  const target = document.querySelector('input[name=target]:checked').value;
+  if (target === 'selected') {
+    const count = document.querySelectorAll('.customer-checklist input[type=checkbox]:checked').length;
+    if (count === 0) { alert('Please select at least one customer.'); return false; }
+    return confirm(`Send to ${count} selected customer(s)?`);
+  }
+  return confirm('Send campaign to ALL active customers? This cannot be undone.');
+}
+</script>
+{% endblock %}

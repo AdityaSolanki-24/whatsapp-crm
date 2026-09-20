@@ -1,0 +1,31 @@
+[Unit]
+Description=WhatsApp CRM — Gunicorn Application Server
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/whatsapp_crm
+Environment="PATH=/var/www/whatsapp_crm/venv/bin"
+EnvironmentFile=/var/www/whatsapp_crm/.env
+
+ExecStart=/var/www/whatsapp_crm/venv/bin/gunicorn \
+    --config deploy/gunicorn_config.py \
+    wsgi:app
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=3
+
+# Logging
+StandardOutput=append:/var/www/whatsapp_crm/logs/systemd.log
+StandardError=append:/var/www/whatsapp_crm/logs/systemd_error.log
+
+[Install]
+WantedBy=multi-user.target
