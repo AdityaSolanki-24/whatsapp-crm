@@ -226,42 +226,5 @@ whatsapp-crm/
     ├── helpers.py
     └── validators.py
 
-Installation
-1. Clone the repository
-git clone https://github.com/AdityaSolanki-24/whatsapp-crm.git
-cd whatsapp-crm
-2. Create a virtual environment
-
-Windows:
-
-python -m venv venv
-
-Activate it:
-
-venv\Scripts\activate
-
-Linux/macOS:
-
-python3 -m venv venv
-source venv/bin/activate
-3. Install dependencies
-pip install -r requirements.txt
-Environment Configuration
-
-Create a .env file in the project root.
-
-Use .env.example as the template:
-
-copy .env.example .env
-
-Then add your own configuration values.
-
-Example:
-
-SECRET_KEY=your-secret-key
-DATABASE_URL=your-database-url
-
-WHATSAPP_ACCESS_TOKEN=your-whatsapp-token
-WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
 
 INSTAGRAM_ACCESS_TOKEN=your-instagram-token
